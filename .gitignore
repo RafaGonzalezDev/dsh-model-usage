@@ -1,0 +1,24 @@
+node_modules/
+lib/
+*.tgz
+.test-home/
+.credentials.yaml
+.env
+coverage/
+
+packages/.build/
+*.tsbuildinfo
+
+.DS_Store
+.idea/
+Thumbs.db
+*.log
+.env.*
+!.env.example
+
+# Local deployment receipts: machine-specific evidence, never published.
+*.local.md
+*.local.png
+
+# Repository-local npm cache (sandboxed environments).
+.npm-cache/
