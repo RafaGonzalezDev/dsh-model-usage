@@ -93,7 +93,8 @@ dsh plugin --profile web add /absolute/path/dsh-model-usage-0.4.5.tgz
 
 The `desktop` profile is managed by the Electron application, so it is reloaded with the
 application's **restartHost** action; refresh the existing UI afterwards. Source edits alone never
-change an installed profile.
+change an installed profile. For an agent-driven or unattended install, follow the
+[agent installation runbook](<docs/agent-install.md>).
 
 ## Where the numbers come from
 
@@ -137,7 +138,8 @@ runner cannot parse `.tsx`.
 ## Documentation
 
 Everything a reviewer needs lives in this README and in the source. The panel copy itself ships in
-Spanish.
+Spanish. Installation, verification and rollback steps for a terminal or desktop agent are in the
+[agent installation runbook](<docs/agent-install.md>).
 
 ## License
 
