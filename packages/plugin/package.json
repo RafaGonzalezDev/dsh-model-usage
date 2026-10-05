@@ -1,6 +1,6 @@
 {
   "name": "dsh-model-usage",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "description": "Global token-usage dashboard by model and provider for DeepSeek Harness",
   "license": "MIT",
   "type": "module",

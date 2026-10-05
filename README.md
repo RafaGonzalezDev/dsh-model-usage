@@ -6,7 +6,7 @@ daily usage plus a per-model, per-provider breakdown, aggregated from every sess
 | | |
 | --- | --- |
 | Package | `dsh-model-usage` (this source repository is `dsh-model-usage`) |
-| Version | `0.4.4` |
+| Version | `0.4.5` |
 | Harness compatibility | `>=0.2.0-rc.2 <0.3.0-0` |
 | License | MIT |
 
@@ -81,14 +81,14 @@ The commands above emit `dsh-model-usage-<version>.tgz` in the repository root.
 **Windows Desktop**
 
 ```powershell
-& "$env:LOCALAPPDATA\Programs\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd" plugin --profile desktop add "C:\path\to\dsh-model-usage-0.4.4.tgz"
+& "$env:LOCALAPPDATA\Programs\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd" plugin --profile desktop add "C:\path\to\dsh-model-usage-0.4.5.tgz"
 ```
 
 **macOS Desktop and local Web**
 
 ```sh
-"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add /absolute/path/dsh-model-usage-0.4.4.tgz
-dsh plugin --profile web add /absolute/path/dsh-model-usage-0.4.4.tgz
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add /absolute/path/dsh-model-usage-0.4.5.tgz
+dsh plugin --profile web add /absolute/path/dsh-model-usage-0.4.5.tgz
 ```
 
 The `desktop` profile is managed by the Electron application, so it is reloaded with the
