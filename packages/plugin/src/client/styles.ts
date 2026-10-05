@@ -96,8 +96,6 @@ button.dsh-model-usage-cal-cell:hover { filter: brightness(1.18); }
 .dsh-model-usage-summary-line span span { margin: 0 5px; }
 
 .dsh-model-usage-count { font-size: 11px; color: var(--dsw-alias-label-secondary); margin-left: 6px; font-weight: 400; }
-.dsh-model-usage-toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--dsw-alias-label-secondary); cursor: pointer; }
-.dsh-model-usage-toggle input { accent-color: var(--dsw-alias-brand-primary); }
 /* The wrap bleeds by the cell padding, so rows keep side padding without losing text alignment. */
 .dsh-model-usage-table-wrap { overflow-x: auto; margin: 22px -14px 0; }
 .dsh-model-usage-table { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -130,7 +128,6 @@ button.dsh-model-usage-cal-cell:hover { filter: brightness(1.18); }
 .dsh-model-usage-sort { border: 0; background: transparent; padding: 0; color: inherit; font: inherit; cursor: pointer; }
 .dsh-model-usage-sort:hover { color: var(--dsw-alias-label-primary); }
 .dsh-model-usage-sort > span { display: inline-block; min-width: 12px; }
-.dsh-model-usage-partial { display: block; color: var(--dsw-alias-label-secondary); font-size: 10px; }
 .dsh-model-usage-table-note { font-size: 11px; color: var(--dsw-alias-label-secondary); padding: 14px 0 0; margin: 0; }
 .dsh-model-usage-coverage { font-size: 11px; color: var(--dsw-alias-label-secondary); }
 .dsh-model-usage-effort-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 24px; margin-top: 24px; }

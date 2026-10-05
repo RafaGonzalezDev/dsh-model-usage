@@ -12,17 +12,6 @@ export interface BreakdownTableProps {
   metric: UsageMetric;
 }
 
-/** Reasoning coverage of one row: absent, explicitly zero or partial against its own requests. */
-function ReasoningCell({ reasoning, reported, requests }: { reasoning: number; reported: number | undefined; requests: number }) {
-  const known = (reported ?? 0) > 0 || reasoning > 0;
-  if (!known) return <td className="dsh-model-usage-numeric" title="Sin desglose de razonamiento en los registros; no equivale a cero">—</td>;
-  const partial = reported !== undefined && reported < requests;
-  return <td className="dsh-model-usage-numeric" title={`${formatCount(reasoning)} tokens de razonamiento${reported === undefined ? '' : ` · ${reported} de ${requests} peticiones con desglose registrado`}`}>
-    {formatTokens(reasoning)}
-    {partial && <small className="dsh-model-usage-partial">parcial</small>}
-  </td>;
-}
-
 function ShareBar({ value, total }: { value: number; total: number }) {
   return <div className="dsh-model-usage-share">
     <span>{formatShare(value, total)}</span>
@@ -32,9 +21,8 @@ function ShareBar({ value, total }: { value: number; total: number }) {
   </div>;
 }
 
-/** Provider groups with collapsible per-model rows; the window share stays visible while collapsed. */
+/** Provider groups with collapsible per-model rows; the window detail columns are always visible. */
 export function BreakdownTable({ rows, totalTokens, totalRequests, metric }: BreakdownTableProps) {
-  const [details, setDetails] = useState(false);
   const [chosen, setChosen] = useState<SortKey | undefined>(undefined);
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
   const sort: SortKey = chosen ?? metric;
@@ -67,13 +55,6 @@ export function BreakdownTable({ rows, totalTokens, totalRequests, metric }: Bre
     >{label}<span aria-hidden="true">{sort === key ? ' ↓' : ' ↕'}</span></button>
   </th>;
 
-  const detailHeads = details && <>
-    <th scope="col" className="dsh-model-usage-numeric">{copy.breakdown.columns.input}</th>
-    <th scope="col" className="dsh-model-usage-numeric">{copy.breakdown.columns.output}</th>
-    <th scope="col" className="dsh-model-usage-numeric">{copy.breakdown.columns.cache}</th>
-    <th scope="col" className="dsh-model-usage-numeric">{copy.breakdown.columns.reasoning}</th>
-  </>;
-
   return <section className="dsh-model-usage-breakdown" aria-label={copy.breakdown.title}>
     <header className="dsh-model-usage-card-head">
       <div>
@@ -86,10 +67,6 @@ export function BreakdownTable({ rows, totalTokens, totalRequests, metric }: Bre
           className="dsh-model-usage-quiet"
           onClick={() => setOpen(openCount === groups.length ? new Set() : new Set(groups.map(group => group.provider)))}
         >{openCount === groups.length ? copy.breakdown.collapse : copy.breakdown.expand}</button>}
-        <label className="dsh-model-usage-toggle">
-          <input type="checkbox" checked={details} onChange={event => setDetails(event.target.checked)} />
-          {copy.breakdown.detail}
-        </label>
       </div>
     </header>
 
@@ -104,7 +81,9 @@ export function BreakdownTable({ rows, totalTokens, totalRequests, metric }: Bre
               {head('tokens', copy.breakdown.columns.tokens, true)}
               <th scope="col" className="dsh-model-usage-numeric">{copy.breakdown.columns.share}</th>
               {head('requests', copy.breakdown.columns.requests, true)}
-              {detailHeads}
+              <th scope="col" className="dsh-model-usage-numeric">{copy.breakdown.columns.input}</th>
+              <th scope="col" className="dsh-model-usage-numeric">{copy.breakdown.columns.output}</th>
+              <th scope="col" className="dsh-model-usage-numeric">{copy.breakdown.columns.cache}</th>
               {head('last', copy.breakdown.columns.last, true)}
             </tr>
           </thead>
@@ -122,12 +101,9 @@ export function BreakdownTable({ rows, totalTokens, totalRequests, metric }: Bre
                   <td className="dsh-model-usage-numeric dsh-model-usage-total" title={formatCount(group.tokens)}>{formatTokens(group.tokens)}</td>
                   <td className="dsh-model-usage-numeric"><ShareBar value={valueOf(group)} total={total} /></td>
                   <td className="dsh-model-usage-numeric">{formatCount(group.requests)}</td>
-                  {details && <>
-                    <td className="dsh-model-usage-numeric" title={formatCount(group.input)}>{formatTokens(group.input)}</td>
-                    <td className="dsh-model-usage-numeric" title={formatCount(group.output)}>{formatTokens(group.output)}</td>
-                    <td className="dsh-model-usage-numeric" title={formatCount(group.cacheRead)}>{formatTokens(group.cacheRead)}</td>
-                    <ReasoningCell reasoning={group.reasoning} reported={group.reasoningReported} requests={group.requests} />
-                  </>}
+                  <td className="dsh-model-usage-numeric" title={formatCount(group.input)}>{formatTokens(group.input)}</td>
+                  <td className="dsh-model-usage-numeric" title={formatCount(group.output)}>{formatTokens(group.output)}</td>
+                  <td className="dsh-model-usage-numeric" title={formatCount(group.cacheRead)}>{formatTokens(group.cacheRead)}</td>
                   <td className="dsh-model-usage-numeric dsh-model-usage-last">{group.lastDay === undefined ? '—' : formatDay(group.lastDay)}</td>
                 </tr>,
                 ...(isOpen ? [...group.models].sort((a, b) => -compare(a, b, row => row.series.name ?? row.series.model)).map(row => <tr key={row.series.id} className="dsh-model-usage-child">
@@ -135,12 +111,9 @@ export function BreakdownTable({ rows, totalTokens, totalRequests, metric }: Bre
                   <td className="dsh-model-usage-numeric" title={formatCount(row.tokens)}>{formatTokens(row.tokens)}</td>
                   <td className="dsh-model-usage-numeric"><ShareBar value={valueOf(row)} total={total} /></td>
                   <td className="dsh-model-usage-numeric">{formatCount(row.requests)}</td>
-                  {details && <>
-                    <td className="dsh-model-usage-numeric" title={formatCount(row.input)}>{formatTokens(row.input)}</td>
-                    <td className="dsh-model-usage-numeric" title={formatCount(row.output)}>{formatTokens(row.output)}</td>
-                    <td className="dsh-model-usage-numeric" title={formatCount(row.cacheRead)}>{formatTokens(row.cacheRead)}</td>
-                    <ReasoningCell reasoning={row.reasoning} reported={row.reasoningReported} requests={row.requests} />
-                  </>}
+                  <td className="dsh-model-usage-numeric" title={formatCount(row.input)}>{formatTokens(row.input)}</td>
+                  <td className="dsh-model-usage-numeric" title={formatCount(row.output)}>{formatTokens(row.output)}</td>
+                  <td className="dsh-model-usage-numeric" title={formatCount(row.cacheRead)}>{formatTokens(row.cacheRead)}</td>
                   <td className="dsh-model-usage-numeric dsh-model-usage-last">{row.lastDay === undefined ? '—' : formatDay(row.lastDay)}</td>
                 </tr>) : []),
               ];
@@ -148,6 +121,5 @@ export function BreakdownTable({ rows, totalTokens, totalRequests, metric }: Bre
           </tbody>
         </table>
       </div>}
-    {details && <p className="dsh-model-usage-table-note">{copy.breakdown.note}</p>}
   </section>;
 }

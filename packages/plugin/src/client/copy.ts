@@ -38,10 +38,8 @@ export const copy = {
     hintRequests: 'Participación en peticiones durante el período seleccionado.',
     hintTokens: 'Participación en tokens durante el período seleccionado.',
     models: (count: number) => `${count} ${count === 1 ? 'modelo' : 'modelos'}`,
-    detail: 'Detalle de tokens',
     expand: 'Desplegar modelos',
     collapse: 'Plegar modelos',
-    note: 'Razonamiento: «—» indica que no hay desglose registrado, no que el modelo no razone. «Parcial» suma solo las peticiones con datos disponibles. La disponibilidad depende del proveedor y del adaptador; no se estima.',
     columns: {
       group: 'Proveedor / modelo',
       tokens: 'Tokens',
@@ -50,7 +48,6 @@ export const copy = {
       input: 'Entrada',
       output: 'Salida',
       cache: 'Caché',
-      reasoning: 'Razonamiento',
       last: 'Último uso',
     },
   },
