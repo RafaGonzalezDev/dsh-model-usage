@@ -18,8 +18,9 @@ daily usage plus a per-model, per-provider breakdown, aggregated from every sess
   surface with a dark shadow.
 - **Monthly model minicharts**: each model has 12 bars rather than a daily chart.
 - **A breakdown grouped by provider**: clicking anywhere on a provider row unfolds the per-model
-  split (tokens, requests, share, cache reads and reasoning, last day used). Provider rows have no
-  arrow; table rows use lateral padding and rounded bands.
+  split (tokens, requests, share, input, output, cache reads, last day used). Every row shows that
+  detail always: there is no simplified view and no toggle. Provider rows have no arrow; table rows
+  use lateral padding and rounded bands.
 - **A fixed 12-month view (365 days)**, including today in the browser's time zone. There is no
   period selector; the overview and breakdown always describe the same window.
 - **Live search above “Modelos más usados”**: typing filters the calendar, models, table and effort
@@ -43,9 +44,9 @@ Two durable event types carry provider usage and both are counted:
 | `compaction/summary` | `data.provider`, `data.model` | `data.usage` |
 
 `totalTokens` is `inputTokens + outputTokens`. Cache reads are a subset of the input and reasoning
-tokens a subset of the output, so they are reported as their own columns and never added to a
-total. Steps that reported no usage still count as requests. `assistant/attempt`, title generation
-and web-search request records carry no usage and are ignored.
+tokens a subset of the output: neither is ever added to a total, and only cache reads keep a
+breakdown column of their own. Steps that reported no usage still count as requests.
+`assistant/attempt`, title generation and web-search request records carry no usage and are ignored.
 
 Effort comes only from the latest `request/header` event's `data.header.config.reasoningEffort`,
 when its provider/model matches the assistant message. A new header without effort clears that
