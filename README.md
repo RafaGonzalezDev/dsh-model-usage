@@ -6,7 +6,7 @@ daily usage plus a per-model, per-provider breakdown, aggregated from every sess
 | | |
 | --- | --- |
 | Package | `dsh-model-usage` (this source repository is `dsh-model-usage`) |
-| Version | `0.4.5` |
+| Version | `0.5.3` |
 | Harness compatibility | `>=0.2.0-rc.2 <0.3.0-0` |
 | License | MIT |
 
@@ -18,9 +18,10 @@ daily usage plus a per-model, per-provider breakdown, aggregated from every sess
   surface with a dark shadow.
 - **Monthly model minicharts**: each model has 12 bars rather than a daily chart.
 - **A breakdown grouped by provider**: clicking anywhere on a provider row unfolds the per-model
-  split (tokens, requests, share, input, output, cache reads, last day used). Every row shows that
-  detail always: there is no simplified view and no toggle. Provider rows have no arrow; table rows
-  use lateral padding and rounded bands.
+  split (tokens, requests, share, input, output, cache, last day used). Every row shows that
+  detail always: there is no simplified view and no toggle. Cache reads and cache writes are stored
+  apart and shown as one column, whose tooltip spells out the split. Provider rows have no arrow;
+  table rows use lateral padding and rounded bands.
 - **A fixed 12-month view (365 days)**, including today in the browser's time zone. There is no
   period selector; the overview and breakdown always describe the same window.
 - **Live search above “Modelos más usados”**: typing filters the calendar, models, table and effort
@@ -43,9 +44,12 @@ Two durable event types carry provider usage and both are counted:
 | `assistant/message` | `data.message.source.{provider,model}` | `data.usage` |
 | `compaction/summary` | `data.provider`, `data.model` | `data.usage` |
 
-`totalTokens` is `inputTokens + outputTokens`. Cache reads are a subset of the input and reasoning
-tokens a subset of the output: neither is ever added to a total, and only cache reads keep a
-breakdown column of their own. Steps that reported no usage still count as requests.
+`totalTokens` is the sum of **four disjoint components**: uncached input, output, cache reads and
+cache writes. `inputTokens` is the *uncached* prompt: OpenAI-compatible adapters report it apart from
+the cache and total `input + output + cache`, while the ChatGPT-plan adapter reports a prompt that
+already contains the cache and totals `input + output`. Each record is reconciled against its own
+`totalTokens`, so no cache token is counted twice or dropped. Reasoning tokens are a subset of the
+output and are never added again. Steps that reported no usage still count as requests.
 `assistant/attempt`, title generation and web-search request records carry no usage and are ignored.
 
 Effort comes only from the latest `request/header` event's `data.header.config.reasoningEffort`,
@@ -99,9 +103,9 @@ change an installed profile. For an agent-driven or unattended install, follow t
 ## Where the numbers come from
 
 The Host folds the durable session logs the Harness already writes and caches the result per
-session under `<profile>/.cache/dsh-model-usage/usage-v1.json`. This version uses cache schema **3**;
-the filename is unchanged. An older cache is automatically discarded and rebuilt from session logs
-after the updated Host loads. Unchanged persisted sessions reuse their cached contribution; live
+session under `<profile>/.cache/dsh-model-usage/usage-v1.json`. This version uses cache schema **4**;
+the filename is unchanged. Schema 3 stored no cache writes, so an older cache is automatically
+discarded and rebuilt from session logs after the updated Host loads. Unchanged persisted sessions reuse their cached contribution; live
 sessions without a persistence signature are re-read. Model names are fetched from the current
 catalog for each snapshot and are not persisted in this cache.
 

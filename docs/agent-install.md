@@ -148,7 +148,7 @@ counting is wrong.
 
 None. The plugin has no settings UI, no credentials and no network access. It reads the profile's
 durable session logs, caches its fold at
-`<DSH_HOME>/profiles/<profile>/.cache/dsh-model-usage/usage-v1.json` (schema 3, per-session), and
+`<DSH_HOME>/profiles/<profile>/.cache/dsh-model-usage/usage-v1.json` (schema 4, per-session), and
 serves the aggregate over the Remote contract.
 
 - An older cache schema is discarded and rebuilt automatically after the updated Host loads; no

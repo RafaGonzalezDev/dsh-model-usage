@@ -22,8 +22,12 @@ Do not change these without an explicit request and a recorded decision:
   (`data.message.source.{provider,model}` with `data.usage`) and `compaction/summary`
   (`data.provider`, `data.model`, `data.usage`). `assistant/attempt`, title generation and
   web-search request records are ignored by design.
-- **`totalTokens` is `inputTokens + outputTokens`.** Cache reads are a subset of the input and
-  reasoning tokens a subset of the output; neither is ever added to a total.
+- **A record's total is the sum of four disjoint components**: uncached input, output, cache reads
+  and cache writes. Reasoning tokens are a subset of the output and are never added again. Adapters
+  differ: an OpenAI-compatible one reports the uncached prompt and totals `input + output + cache`,
+  while the ChatGPT-plan one reports a prompt that already contains the cache and totals
+  `input + output`. Each record is reconciled against its own `totalTokens`, so `input` always means
+  *uncached* prompt and the four components always add up to the provider total.
 - **Missing effort is unknown**, never a default and never zero. Effort comes only from the latest
   `request/header` event whose provider/model matches the assistant message; a new header without
   effort clears the attribution, and compaction summaries never inherit conversation effort.
@@ -76,9 +80,9 @@ Runner specifics:
 - `UsageQuery`, `UsageSnapshot`, `UsageSeries`, `UsageCell` and `UsageSeriesTotals` in
   [contracts.ts](packages/plugin/src/contracts.ts) are the Host/Client boundary. Keep new fields
   optional and keep the Host accepting the previous range contract.
-- The cache lives at `<profile>/.cache/dsh-model-usage/usage-v1.json` and uses **schema 3**. The
+- The cache lives at `<profile>/.cache/dsh-model-usage/usage-v1.json` and uses **schema 4**. The
   filename does not change with the schema: an older cache is discarded and rebuilt from session
-  logs after the updated Host loads.
+  logs after the updated Host loads, because schema 3 never stored cache writes.
 - Changing the persisted shape requires bumping the schema. Changing what is counted requires
   updating the **How it counts** section of [README.md](README.md) and the tests that assert it.
 - Live sessions and activity persisted after the last scan legitimately differ from the cache;
