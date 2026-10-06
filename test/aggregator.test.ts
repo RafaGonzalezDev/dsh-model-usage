@@ -41,7 +41,7 @@ test('a cold pass reads every session once and answers the window', async () => 
   assert.deepEqual(snapshot.series.map(entry => entry.model).sort(), ['deepseek-v4.1-flash', 'gpt-6-astra', 'gpt-6.1-sol']);
   const day = snapshot.days.indexOf('2026-10-04');
   const cells = snapshot.cells.filter(cell => cell.day === day);
-  assert.equal(cells.reduce((sum, cell) => sum + cell.tokens, 0), 120 + 120 + 1_100);
+  assert.equal(cells.reduce((sum, cell) => sum + cell.tokens, 0), 160 + 160 + 1_100);
   assert.equal(cells.reduce((sum, cell) => sum + cell.requests, 0), 3);
   assert.equal(store.writes, 1, 'the first pass persists the cache');
 });
@@ -54,7 +54,7 @@ test('a warm pass with unchanged revisions reads no log at all', async () => {
   const readsAfterFirst = corpus.reads.length;
   const second = await aggregator.snapshot(query(), SIGNAL);
   assert.equal(corpus.reads.length, readsAfterFirst, 'nothing was re-read');
-  assert.equal(second.allTime.tokens, 120);
+  assert.equal(second.allTime.tokens, 160);
 });
 
 test('only the session whose revision moved is re-read', async () => {

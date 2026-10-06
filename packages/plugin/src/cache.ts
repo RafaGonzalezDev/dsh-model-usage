@@ -8,10 +8,11 @@
  */
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import { bucketStart, mergeSeries, type BucketTotals, type SeriesTotals } from './fold.ts';
+import { bucketStart, mergeSeries, totalTokens, type BucketTotals, type SeriesTotals } from './fold.ts';
 
-/** On-disk schema version; a mismatch discards the file and rebuilds it. */
-export const CACHE_VERSION = 3;
+/** On-disk schema version; a mismatch discards the file and rebuilds it.
+ * Version 4 stores the cache-write component that version 3 never kept. */
+export const CACHE_VERSION = 4;
 
 /** One session's cached contribution and the signature it was folded from. */
 export interface CachedSession {
@@ -33,22 +34,23 @@ export function emptyCache(): UsageCache {
   return { sessions: new Map(), archive: new Map() };
 }
 
-type SerializedTotals = [number, number, number, number, number, (number | null)?, { effort: string; requests: number }[]?];
+/** Components, requests and the optional reasoning coverage/efforts. */
+type SerializedTotals = [number, number, number, number, number, number, (number | null)?, { effort: string; requests: number }[]?];
 
 function toArray(totals: SeriesTotals): SerializedTotals {
-  const value: SerializedTotals = [totals.input, totals.output, totals.cacheRead, totals.reasoning, totals.requests];
-  if (totals.reasoningReported !== undefined || totals.reasoningEfforts !== undefined) value[5] = totals.reasoningReported ?? null;
-  if (totals.reasoningEfforts !== undefined) value[6] = totals.reasoningEfforts;
+  const value: SerializedTotals = [totals.input, totals.output, totals.cacheRead, totals.cacheWrite, totals.reasoning, totals.requests];
+  if (totals.reasoningReported !== undefined || totals.reasoningEfforts !== undefined) value[6] = totals.reasoningReported ?? null;
+  if (totals.reasoningEfforts !== undefined) value[7] = totals.reasoningEfforts;
   return value;
 }
 
 function fromArray(value: unknown): SeriesTotals | undefined {
-  if (!Array.isArray(value) || value.length < 5 || value.length > 7) return undefined;
-  const [input, output, cacheRead, reasoning, requests, reported, reasoningEfforts] = value;
-  if (![input, output, cacheRead, reasoning, requests].every(item => typeof item === 'number' && Number.isFinite(item))) return undefined;
-  const reasoningReported = reported === null && value.length === 7 ? undefined : reported;
+  if (!Array.isArray(value) || value.length < 6 || value.length > 8) return undefined;
+  const [input, output, cacheRead, cacheWrite, reasoning, requests, reported, reasoningEfforts] = value;
+  if (![input, output, cacheRead, cacheWrite, reasoning, requests].every(item => typeof item === 'number' && Number.isFinite(item))) return undefined;
+  const reasoningReported = reported === null && value.length === 8 ? undefined : reported;
   if (reasoningReported !== undefined && (typeof reasoningReported !== 'number' || !Number.isSafeInteger(reasoningReported) || reasoningReported < 0 || reasoningReported > requests)) return undefined;
-  if (value.length === 7) {
+  if (value.length === 8) {
     if (!Array.isArray(reasoningEfforts)) return undefined;
     const seen = new Set<string>();
     let count = 0;
@@ -60,7 +62,7 @@ function fromArray(value: unknown): SeriesTotals | undefined {
     }
     if (count > requests) return undefined;
   }
-  return { input, output, cacheRead, reasoning, requests, ...(reasoningReported === undefined ? {} : { reasoningReported }),
+  return { input, output, cacheRead, cacheWrite, reasoning, requests, ...(reasoningReported === undefined ? {} : { reasoningReported }),
     ...(reasoningEfforts === undefined ? {} : { reasoningEfforts }) } as SeriesTotals;
 }
 
@@ -173,7 +175,7 @@ export function compactArchive(
 export function cacheTotals(cache: UsageCache): { tokens: number; requests: number } {
   let tokens = 0;
   let requests = 0;
-  const add = (totals: SeriesTotals): void => { tokens += totals.input + totals.output; requests += totals.requests; };
+  const add = (totals: SeriesTotals): void => { tokens += totalTokens(totals); requests += totals.requests; };
   for (const entry of cache.sessions.values()) for (const series of entry.buckets.values()) for (const totals of series.values()) add(totals);
   for (const series of cache.archive.values()) for (const totals of series.values()) add(totals);
   return { tokens, requests };

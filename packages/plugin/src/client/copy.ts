@@ -40,12 +40,14 @@ export const copy = {
     models: (count: number) => `${count} ${count === 1 ? 'modelo' : 'modelos'}`,
     expand: 'Desplegar modelos',
     collapse: 'Plegar modelos',
+    /** Both cache halves are one column; the cell title spells them out from the exact counts. */
+    cacheTitle: (read: string, write: string) => `Lectura ${read} · Escritura ${write}`,
     columns: {
       group: 'Proveedor / modelo',
       tokens: 'Tokens',
       share: 'Participación',
       requests: 'Peticiones',
-      input: 'Entrada',
+      input: 'Entrada no cacheada',
       output: 'Salida',
       cache: 'Caché',
       last: 'Último uso',

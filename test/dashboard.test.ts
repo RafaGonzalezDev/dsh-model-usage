@@ -26,8 +26,8 @@ function snapshot(): UsageSnapshot {
       { day: 1, series: 1, tokens: 50, requests: 1 },
     ],
     seriesTotals: [
-      { series: 0, input: 300, output: 100, cacheRead: 40, reasoning: 5, requests: 3 },
-      { series: 1, input: 40, output: 10, cacheRead: 0, reasoning: 0, requests: 1 },
+      { series: 0, input: 260, output: 100, cacheRead: 40, cacheWrite: 0, reasoning: 5, requests: 3 },
+      { series: 1, input: 40, output: 10, cacheRead: 0, cacheWrite: 0, reasoning: 0, requests: 1 },
     ],
     allTime: { tokens: 999, requests: 9 },
     scanned: { sessions: 2, live: 0, skipped: 0 },
@@ -76,9 +76,35 @@ test('a row reports its own token split and the last day it was used', () => {
   const view = deriveUsage(snapshot(), ALL, 'tokens');
   const first = view.rows.find(row => row.series.model === 'm1');
   assert.deepEqual(
-    { tokens: first?.tokens, input: first?.input, output: first?.output, cache: first?.cacheRead, reasoning: first?.reasoning, last: first?.lastDay },
-    { tokens: 400, input: 300, output: 100, cache: 40, reasoning: 5, last: '2026-10-03' },
+    { tokens: first?.tokens, input: first?.input, output: first?.output, cache: first?.cache, cacheRead: first?.cacheRead, cacheWrite: first?.cacheWrite, reasoning: first?.reasoning, last: first?.lastDay },
+    { tokens: 400, input: 260, output: 100, cache: 40, cacheRead: 40, cacheWrite: 0, reasoning: 5, last: '2026-10-03' },
   );
+});
+
+test('the displayed cache groups both halves while the row keeps them apart', () => {
+  const data = snapshot();
+  data.seriesTotals[0]!.cacheRead = 30;
+  data.seriesTotals[0]!.cacheWrite = 12;
+  const row = deriveUsage(data, ALL, 'tokens').rows.find(item => item.series.model === 'm1');
+  assert.equal(row?.cache, 42, 'the column the user sees is the sum');
+  assert.deepEqual([row?.cacheRead, row?.cacheWrite], [30, 12], 'the split survives for a future cost view');
+  assert.equal(row?.tokens, 260 + 100 + 42, 'grouping the display never changes the reconciled total');
+  const group = groupByProvider(deriveUsage(data, ALL, 'tokens').rows).find(item => item.provider === 'a');
+  assert.equal(group?.cache, 42);
+});
+
+test('an older Host without a total is recomputed from the four components', () => {
+  const data = snapshot();
+  assert.equal(data.seriesTotals[0]!.tokens, undefined, 'the fixture models an older Host');
+  const row = deriveUsage(data, ALL, 'tokens').rows.find(item => item.series.model === 'm1');
+  assert.equal(row?.tokens, 260 + 100 + 40 + 0);
+});
+
+test('the Host total, when present, is authoritative over the components', () => {
+  const data = snapshot();
+  data.seriesTotals[0]!.tokens = 777;
+  const row = deriveUsage(data, ALL, 'tokens').rows.find(item => item.series.model === 'm1');
+  assert.equal(row?.tokens, 777);
 });
 
 test('rows preserve reasoning coverage, including explicit zero and older snapshots', () => {
@@ -146,9 +172,9 @@ function multiSnapshot(): UsageSnapshot {
       { day: 2, series: 2, tokens: 400, requests: 4 },
     ],
     seriesTotals: [
-      { series: 0, input: 100, output: 10, cacheRead: 5, reasoning: 2, reasoningReported: 3, requests: 3 },
-      { series: 1, input: 50, output: 0, cacheRead: 0, reasoning: 0, reasoningReported: 1, requests: 1 },
-      { series: 2, input: 300, output: 100, cacheRead: 0, reasoning: 0, requests: 4 },
+      { series: 0, input: 90, output: 10, cacheRead: 5, cacheWrite: 5, reasoning: 2, reasoningReported: 3, requests: 3 },
+      { series: 1, input: 50, output: 0, cacheRead: 0, cacheWrite: 0, reasoning: 0, reasoningReported: 1, requests: 1 },
+      { series: 2, input: 300, output: 100, cacheRead: 0, cacheWrite: 0, reasoning: 0, requests: 4 },
     ],
     allTime: { tokens: 1_000, requests: 10 },
     scanned: { sessions: 1, live: 0, skipped: 0 },
@@ -161,8 +187,8 @@ test('provider groups fold every model of a provider and keep their coverage apa
   assert.deepEqual(groups.map(group => group.provider), ['b', 'a'], 'heaviest provider first');
   const a = groups.find(group => group.provider === 'a');
   assert.deepEqual(
-    { tokens: a?.tokens, requests: a?.requests, input: a?.input, output: a?.output, cache: a?.cacheRead, reasoning: a?.reasoning, reported: a?.reasoningReported, models: a?.models.length, last: a?.lastDay },
-    { tokens: 160, requests: 4, input: 150, output: 10, cache: 5, reasoning: 2, reported: 4, models: 2, last: '2026-10-03' },
+    { tokens: a?.tokens, requests: a?.requests, input: a?.input, output: a?.output, cache: a?.cacheRead, cacheWrite: a?.cacheWrite, reasoning: a?.reasoning, reported: a?.reasoningReported, models: a?.models.length, last: a?.lastDay },
+    { tokens: 160, requests: 4, input: 140, output: 10, cache: 5, cacheWrite: 5, reasoning: 2, reported: 4, models: 2, last: '2026-10-03' },
   );
   const b = groups.find(group => group.provider === 'b');
   assert.equal(b?.reasoningReported, undefined, 'a provider whose models never declared coverage stays unknown');
@@ -321,3 +347,4 @@ test('the dashboard always opens the twelve-month window', async () => {
 function settle(): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, 0));
 }
+

@@ -18,6 +18,7 @@ export interface SeriesTotals {
   input: number;
   output: number;
   cacheRead: number;
+  cacheWrite: number;
   reasoning: number;
   /** Requests with finite non-negative reasoningTokens in the log, including explicit zero. */
   reasoningReported?: number;
@@ -66,13 +67,19 @@ export function bucketStart(bucket: number): number {
 
 /** A fresh all-zero total set. */
 export function emptyTotals(): SeriesTotals {
-  return { input: 0, output: 0, cacheRead: 0, reasoning: 0, requests: 0 };
+  return { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, reasoning: 0, requests: 0 };
 }
 
-/** Total tokens of one series: input plus output. Cache reads and reasoning are subsets and are
- * never added, matching what the provider billed for the request. */
+/**
+ * Total tokens of one series.
+ *
+ * The Harness normalizes provider usage into four disjoint components: input tokens are the
+ * *uncached* prompt, cache reads and cache writes are billed prompt tokens reported apart, and
+ * reasoning tokens are already included in the output. The provider total is therefore the sum of
+ * the four components, and reasoning is never added again.
+ */
 export function totalTokens(totals: SeriesTotals): number {
-  return totals.input + totals.output;
+  return totals.input + totals.output + totals.cacheRead + totals.cacheWrite;
 }
 
 type TargetRead =
@@ -90,6 +97,45 @@ function text(value: unknown): string | undefined {
 
 function count(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+}
+
+/** The four disjoint components of one usage record, after reconciling it with its own total. */
+interface UsageParts {
+  /** Prompt tokens that were not served from or written to the provider cache. */
+  input: number;
+  output: number;
+  cacheRead: number;
+  cacheWrite: number;
+  reasoning: number;
+}
+
+/**
+ * Split one usage record into disjoint components.
+ *
+ * The Harness normalizes adapters differently, and each record states which convention it used:
+ * an OpenAI-compatible adapter reports the *uncached* prompt apart from the cache and totals
+ * `input + output + cache + write`, while the ChatGPT-plan adapter reports a prompt that already
+ * contains the cache and totals `input + output`. Reconciling against the record's own
+ * `totalTokens` needs no provider table and keeps the four components adding up to the provider
+ * total in both conventions. Without a usable total the components are taken as disjoint, which is
+ * the convention of the adapters that report them apart.
+ */
+function usageParts(usage: Record<string, unknown> | undefined): UsageParts {
+  const rawInput = count(usage?.['inputTokens']);
+  const output = count(usage?.['outputTokens']);
+  const cacheRead = count(usage?.['cacheReadTokens']);
+  const cacheWrite = count(usage?.['cacheWriteTokens']);
+  const total = usage?.['totalTokens'];
+  const reported = typeof total === 'number' && Number.isFinite(total) && total >= 0 ? Math.floor(total) : undefined;
+  const cached = cacheRead + cacheWrite;
+  const inclusive = reported !== undefined && cached > 0 && reported === rawInput + output;
+  return {
+    input: inclusive ? Math.max(0, rawInput - cached) : rawInput,
+    output,
+    cacheRead,
+    cacheWrite,
+    reasoning: count(usage?.['reasoningTokens']),
+  };
 }
 
 function readTarget(event: UsageEventLike): TargetRead {
@@ -140,12 +186,13 @@ export function foldSession(events: readonly UsageEventLike[]): SessionContribut
     if (series === undefined) { series = new Map(); buckets.set(bucket, series); }
     const id = seriesId(read.provider, read.model);
     const totals = series.get(id) ?? emptyTotals();
-    const usage = read.usage;
-    totals.input += count(usage?.['inputTokens']);
-    totals.output += count(usage?.['outputTokens']);
-    totals.cacheRead += count(usage?.['cacheReadTokens']);
-    const reasoning = usage?.['reasoningTokens'];
-    totals.reasoning += count(reasoning);
+    const parts = usageParts(read.usage);
+    totals.input += parts.input;
+    totals.output += parts.output;
+    totals.cacheRead += parts.cacheRead;
+    totals.cacheWrite += parts.cacheWrite;
+    const reasoning = read.usage?.['reasoningTokens'];
+    totals.reasoning += parts.reasoning;
     if (typeof reasoning === 'number' && Number.isFinite(reasoning) && reasoning >= 0) {
       totals.reasoningReported = (totals.reasoningReported ?? 0) + 1;
     }
@@ -184,6 +231,7 @@ export function mergeSeries(target: Map<string, SeriesTotals>, source: Map<strin
     current.input += totals.input;
     current.output += totals.output;
     current.cacheRead += totals.cacheRead;
+    current.cacheWrite += totals.cacheWrite;
     current.reasoning += totals.reasoning;
     if (totals.reasoningReported !== undefined) {
       current.reasoningReported = (current.reasoningReported ?? 0) + totals.reasoningReported;

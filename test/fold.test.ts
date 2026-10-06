@@ -7,7 +7,7 @@ import {
 
 const TIME = Date.UTC(2026, 9, 4, 14, 24, 11);
 
-const DEFAULT_USAGE = { inputTokens: 100, outputTokens: 20, totalTokens: 120, cacheReadTokens: 40, reasoningTokens: 5 };
+const DEFAULT_USAGE = { inputTokens: 100, outputTokens: 20, totalTokens: 160, cacheReadTokens: 40, reasoningTokens: 5 };
 
 function assistant(overrides: {
   time?: number; provider?: string; model?: string; usage?: Record<string, unknown> | null;
@@ -31,8 +31,57 @@ test('an assistant step folds into one bucket and one series', () => {
   const series = contribution.buckets.get(bucketOf(TIME));
   assert.ok(series);
   const totals = series.get(seriesId('chatgpt-plan', 'gpt-6.1-sol'));
-  assert.deepEqual(totals, { input: 100, output: 20, cacheRead: 40, reasoning: 5, reasoningReported: 1, requests: 1 });
-  assert.equal(totalTokens(totals!), 120, 'cache reads and reasoning stay out of the total');
+  assert.deepEqual(totals, { input: 100, output: 20, cacheRead: 40, cacheWrite: 0, reasoning: 5, reasoningReported: 1, requests: 1 });
+  assert.equal(totalTokens(totals!), 160, 'uncached input, cache reads, cache writes and output all count');
+});
+
+test('a cache-heavy step counts its cached prompt: 2032 + 9472 + 187 = 11691', () => {
+  const usage = { inputTokens: 2_032, outputTokens: 187, totalTokens: 11_691, cacheReadTokens: 9_472, reasoningTokens: 0 };
+  const contribution = foldSession([assistant({ usage })]);
+  const totals = contribution.buckets.get(bucketOf(TIME))!.get(seriesId('chatgpt-plan', 'gpt-6.1-sol'))!;
+  assert.deepEqual(totals, { input: 2_032, output: 187, cacheRead: 9_472, cacheWrite: 0, reasoning: 0, reasoningReported: 1, requests: 1 });
+  assert.equal(totalTokens(totals), usage.totalTokens, 'the four components reproduce the provider total');
+});
+
+test('cache writes are a component of their own, never folded into the uncached input', () => {
+  const usage = { inputTokens: 1_500, outputTokens: 200, totalTokens: 3_200, cacheReadTokens: 0, cacheWriteTokens: 1_500, reasoningTokens: 10 };
+  const contribution = foldSession([assistant({ usage })]);
+  const totals = contribution.buckets.get(bucketOf(TIME))!.get(seriesId('chatgpt-plan', 'gpt-6.1-sol'))!;
+  assert.deepEqual(totals, { input: 1_500, output: 200, cacheRead: 0, cacheWrite: 1_500, reasoning: 10, reasoningReported: 1, requests: 1 });
+  assert.equal(totalTokens(totals), usage.totalTokens);
+});
+
+test('a prompt that already contains the cache is normalized against the record total', () => {
+  // The ChatGPT-plan adapter totals `input + output`, so its prompt is inclusive.
+  const usage = { inputTokens: 10_000, outputTokens: 500, totalTokens: 10_500, cacheReadTokens: 9_000, reasoningTokens: 0 };
+  const contribution = foldSession([assistant({ usage })]);
+  const totals = contribution.buckets.get(bucketOf(TIME))!.get(seriesId('chatgpt-plan', 'gpt-6.1-sol'))!;
+  assert.deepEqual(totals, { input: 1_000, output: 500, cacheRead: 9_000, cacheWrite: 0, reasoning: 0, reasoningReported: 1, requests: 1 });
+  assert.equal(totalTokens(totals), usage.totalTokens, 'the inclusive prompt is never counted twice');
+});
+
+test('a record whose total matches neither convention keeps its reported components', () => {
+  const usage = { inputTokens: 100, outputTokens: 20, totalTokens: 999, cacheReadTokens: 40, reasoningTokens: 0 };
+  const contribution = foldSession([assistant({ usage })]);
+  const totals = contribution.buckets.get(bucketOf(TIME))!.get(seriesId('chatgpt-plan', 'gpt-6.1-sol'))!;
+  assert.deepEqual(totals, { input: 100, output: 20, cacheRead: 40, cacheWrite: 0, reasoning: 0, reasoningReported: 1, requests: 1 });
+  assert.equal(totalTokens(totals), 160, 'the components win when the total explains nothing');
+});
+
+test('a record without a total is read as disjoint components', () => {
+  const usage = { inputTokens: 100, outputTokens: 20, cacheReadTokens: 40, reasoningTokens: 0 };
+  const contribution = foldSession([assistant({ usage })]);
+  const totals = contribution.buckets.get(bucketOf(TIME))!.get(seriesId('chatgpt-plan', 'gpt-6.1-sol'))!;
+  assert.deepEqual(totals, { input: 100, output: 20, cacheRead: 40, cacheWrite: 0, reasoning: 0, reasoningReported: 1, requests: 1 });
+  assert.equal(totalTokens(totals), 160);
+});
+
+test('an inclusive total never subtracts more than the prompt it was given', () => {
+  const usage = { inputTokens: 10, outputTokens: 5, totalTokens: 15, cacheReadTokens: 40, reasoningTokens: 0 };
+  const contribution = foldSession([assistant({ usage })]);
+  const totals = contribution.buckets.get(bucketOf(TIME))!.get(seriesId('chatgpt-plan', 'gpt-6.1-sol'))!;
+  assert.equal(totals.input, 0, 'the uncached prompt floors at zero instead of going negative');
+  assert.equal(totalTokens(totals), 45);
 });
 
 test('buckets are 15 minutes wide and reject the events of other buckets', () => {
@@ -45,7 +94,7 @@ test('buckets are 15 minutes wide and reject the events of other buckets', () =>
 test('a step without usage still counts as a request with zero tokens', () => {
   const contribution = foldSession([assistant({ usage: null })]);
   const totals = contribution.buckets.get(bucketOf(TIME))!.get(seriesId('chatgpt-plan', 'gpt-6.1-sol'))!;
-  assert.deepEqual(totals, { input: 0, output: 0, cacheRead: 0, reasoning: 0, requests: 1 });
+  assert.deepEqual(totals, { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, reasoning: 0, requests: 1 });
 });
 
 test('a model step without a model name is unusable, not silently attributed', () => {
@@ -72,7 +121,7 @@ test('compaction summaries count with their own provider and model', () => {
     data: { provider: 'chatgpt-plan', model: 'gpt-6-astra', usage: { inputTokens: 47_322, outputTokens: 4_136, totalTokens: 51_458, cacheReadTokens: 0, reasoningTokens: 0 } },
   }]);
   const totals = contribution.buckets.get(bucketOf(TIME))!.get(seriesId('chatgpt-plan', 'gpt-6-astra'))!;
-  assert.deepEqual(totals, { input: 47_322, output: 4_136, cacheRead: 0, reasoning: 0, reasoningReported: 1, requests: 1 });
+  assert.deepEqual(totals, { input: 47_322, output: 4_136, cacheRead: 0, cacheWrite: 0, reasoning: 0, reasoningReported: 1, requests: 1 });
 });
 
 test('attempts, requests and unrelated events never count', () => {
@@ -86,9 +135,9 @@ test('attempts, requests and unrelated events never count', () => {
 });
 
 test('malformed counters are floored to zero rather than poisoning the totals', () => {
-  const contribution = foldSession([assistant({ usage: { inputTokens: -5, outputTokens: Number.NaN, cacheReadTokens: 'x', reasoningTokens: 2.7 } })]);
+  const contribution = foldSession([assistant({ usage: { inputTokens: -5, outputTokens: Number.NaN, cacheReadTokens: 'x', cacheWriteTokens: Infinity, reasoningTokens: 2.7 } })]);
   const totals = contribution.buckets.get(bucketOf(TIME))!.get(seriesId('chatgpt-plan', 'gpt-6.1-sol'))!;
-  assert.deepEqual(totals, { input: 0, output: 0, cacheRead: 0, reasoning: 2, reasoningReported: 1, requests: 1 });
+  assert.deepEqual(totals, { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, reasoning: 2, reasoningReported: 1, requests: 1 });
 });
 
 test('an event without a usable timestamp is reported, not misdated', () => {
@@ -108,8 +157,8 @@ test('mergeInto sums the same series and keeps different series apart', () => {
     [seriesId('b', 'n'), { ...emptyTotals(), input: 9, requests: 1 }],
   ])]]));
   const series = target.get(bucket)!;
-  assert.deepEqual(series.get(seriesId('a', 'm')), { input: 3, output: 3, cacheRead: 0, reasoning: 0, requests: 2 });
-  assert.deepEqual(series.get(seriesId('b', 'n')), { input: 9, output: 0, cacheRead: 0, reasoning: 0, requests: 1 });
+  assert.deepEqual(series.get(seriesId('a', 'm')), { input: 3, output: 3, cacheRead: 0, cacheWrite: 0, reasoning: 0, requests: 2 });
+  assert.deepEqual(series.get(seriesId('b', 'n')), { input: 9, output: 0, cacheRead: 0, cacheWrite: 0, reasoning: 0, requests: 1 });
 });
 
 test('reasoning availability distinguishes absent, invalid and explicitly zero usage', () => {
@@ -127,7 +176,7 @@ test('partial reasoning coverage survives bucket merging without inventing repor
     mergeInto(target, foldSession([assistant({ usage })]).buckets);
   }
   const totals = target.get(bucketOf(TIME))!.get(seriesId('chatgpt-plan', 'gpt-6.1-sol'))!;
-  assert.deepEqual(totals, { input: 0, output: 0, cacheRead: 0, reasoning: 7, reasoningReported: 2, requests: 4 });
+  assert.deepEqual(totals, { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, reasoning: 7, reasoningReported: 2, requests: 4 });
 });
 
 test('effort follows only matching logged headers and resets rather than inferring defaults', () => {

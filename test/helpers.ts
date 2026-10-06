@@ -61,7 +61,7 @@ export class FakePersistence implements UsagePersistencePort {
   }
 }
 
-const DEFAULT_USAGE = { inputTokens: 100, outputTokens: 20, totalTokens: 120, cacheReadTokens: 40, reasoningTokens: 5 };
+const DEFAULT_USAGE = { inputTokens: 100, outputTokens: 20, totalTokens: 160, cacheReadTokens: 40, reasoningTokens: 5 };
 
 /** One model step at a given instant. */
 export function step(time: number, provider = 'chatgpt-plan', model = 'gpt-6.1-sol', usage: Record<string, unknown> | null = DEFAULT_USAGE): UsageEventLike {

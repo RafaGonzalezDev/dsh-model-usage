@@ -34,7 +34,7 @@ export interface UsageCell {
   day: number;
   /** Index into `series`. */
   series: number;
-  /** Provider input plus output tokens; cache reads and reasoning are subsets and never added. */
+  /** Provider total: uncached input plus output plus cache reads and cache writes. */
   tokens: number;
   /** Assistant steps plus compaction summaries that reported this pair. */
   requests: number;
@@ -44,11 +44,16 @@ export interface UsageCell {
 export interface UsageSeriesTotals {
   /** Index into `series`. */
   series: number;
+  /** Provider total for this series; an older Host omits it and the Client recomputes it. */
+  tokens?: number;
+  /** Uncached prompt tokens; cache reads and writes are reported apart and never folded in. */
   input: number;
   output: number;
-  /** Subset of `input`; never added to the total. */
+  /** Prompt tokens served from the provider cache. */
   cacheRead: number;
-  /** Subset of `output`; never added to the total. */
+  /** Prompt tokens written to the provider cache; omitted by an older Host. */
+  cacheWrite?: number;
+  /** Subset of `output`; never added to the total on its own. */
   reasoning: number;
   /** Requests with finite non-negative reasoningTokens in normalized logs, including zero.
    * Omitted means no reported requests (or an older Host); not proof of original API exposure. */

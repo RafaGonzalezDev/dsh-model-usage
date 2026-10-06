@@ -103,7 +103,7 @@ export function BreakdownTable({ rows, totalTokens, totalRequests, metric }: Bre
                   <td className="dsh-model-usage-numeric">{formatCount(group.requests)}</td>
                   <td className="dsh-model-usage-numeric" title={formatCount(group.input)}>{formatTokens(group.input)}</td>
                   <td className="dsh-model-usage-numeric" title={formatCount(group.output)}>{formatTokens(group.output)}</td>
-                  <td className="dsh-model-usage-numeric" title={formatCount(group.cacheRead)}>{formatTokens(group.cacheRead)}</td>
+                  <td className="dsh-model-usage-numeric" title={copy.breakdown.cacheTitle(formatCount(group.cacheRead), formatCount(group.cacheWrite))}>{formatTokens(group.cache)}</td>
                   <td className="dsh-model-usage-numeric dsh-model-usage-last">{group.lastDay === undefined ? '—' : formatDay(group.lastDay)}</td>
                 </tr>,
                 ...(isOpen ? [...group.models].sort((a, b) => -compare(a, b, row => row.series.name ?? row.series.model)).map(row => <tr key={row.series.id} className="dsh-model-usage-child">
@@ -113,7 +113,7 @@ export function BreakdownTable({ rows, totalTokens, totalRequests, metric }: Bre
                   <td className="dsh-model-usage-numeric">{formatCount(row.requests)}</td>
                   <td className="dsh-model-usage-numeric" title={formatCount(row.input)}>{formatTokens(row.input)}</td>
                   <td className="dsh-model-usage-numeric" title={formatCount(row.output)}>{formatTokens(row.output)}</td>
-                  <td className="dsh-model-usage-numeric" title={formatCount(row.cacheRead)}>{formatTokens(row.cacheRead)}</td>
+                  <td className="dsh-model-usage-numeric" title={copy.breakdown.cacheTitle(formatCount(row.cacheRead), formatCount(row.cacheWrite))}>{formatTokens(row.cache)}</td>
                   <td className="dsh-model-usage-numeric dsh-model-usage-last">{row.lastDay === undefined ? '—' : formatDay(row.lastDay)}</td>
                 </tr>) : []),
               ];

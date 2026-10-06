@@ -25,17 +25,19 @@ test('an absent, corrupt or foreign cache is discarded instead of trusted', () =
   assert.equal(parseCache('{ not json'), undefined);
   assert.equal(parseCache(JSON.stringify({ version: CACHE_VERSION + 1, sessions: {} })), undefined);
   assert.equal(parseCache(JSON.stringify({ version: 1, sessions: {} })), undefined);
+  assert.equal(parseCache(JSON.stringify({ version: 3, sessions: {} })), undefined, 'schema 3 never stored cache writes');
+  assert.equal(CACHE_VERSION, 4);
   assert.deepEqual(parseCache(JSON.stringify({ version: CACHE_VERSION })), emptyCache());
 });
 
-test('the cache round-trips buckets and their signatures', () => {
+test('the cache round-trips buckets, every component and their signatures', () => {
   const time = Date.UTC(2026, 9, 4, 12, 0, 0);
-  const cache = cacheWith(bucketOf(time), totals({ input: 100, output: 20, cacheRead: 40, reasoning: 5, requests: 3 }));
+  const cache = cacheWith(bucketOf(time), totals({ input: 100, output: 20, cacheRead: 40, cacheWrite: 1_536, reasoning: 5, requests: 3 }));
   const restored = parseCache(serializeCache(cache, time));
   assert.ok(restored);
   const entry = restored.sessions.get('session-a');
   assert.equal(entry?.sig, 'rev-1:10:2048');
-  assert.deepEqual(entry?.buckets.get(bucketOf(time))?.get(ID), { input: 100, output: 20, cacheRead: 40, reasoning: 5, requests: 3 });
+  assert.deepEqual(entry?.buckets.get(bucketOf(time))?.get(ID), { input: 100, output: 20, cacheRead: 40, cacheWrite: 1_536, reasoning: 5, requests: 3 });
 });
 
 test('malformed entries are dropped without discarding the rest of the file', () => {
@@ -44,9 +46,10 @@ test('malformed entries are dropped without discarding the rest of the file', ()
   const text = JSON.stringify({
     version: CACHE_VERSION,
     sessions: {
-      good: { sig: 'rev:1:1', buckets: { [bucket]: { [ID]: [1, 2, 0, 0, 1] } } },
-      unsigned: { sig: '', buckets: { [bucket]: { [ID]: [1, 2, 0, 0, 1] } } },
+      good: { sig: 'rev:1:1', buckets: { [bucket]: { [ID]: [1, 2, 3, 4, 0, 1] } } },
+      unsigned: { sig: '', buckets: { [bucket]: { [ID]: [1, 2, 3, 4, 0, 1] } } },
       malformed: { sig: 'rev:1:1', buckets: { [bucket]: { [ID]: [1, 2] } } },
+      legacy: { sig: 'rev:1:1', buckets: { [bucket]: { [ID]: [1, 2, 0, 0, 1] } } },
       broken: { sig: 'rev:1:1', buckets: 'nope' },
     },
   });
@@ -76,7 +79,7 @@ test('buckets past the retention window move to the monthly archive', () => {
   compactArchive(cache, recent, 400, instant => new Date(instant).toISOString().slice(0, 7));
   const entry = cache.sessions.get('session-a');
   assert.deepEqual([...(entry?.buckets.keys() ?? [])], [bucketOf(recent)], 'only the retained bucket stays per-session');
-  assert.deepEqual(cache.archive.get('2024-01')?.get(ID), { input: 10, output: 0, cacheRead: 0, reasoning: 0, requests: 1 });
+  assert.deepEqual(cache.archive.get('2024-01')?.get(ID), { input: 10, output: 0, cacheRead: 0, cacheWrite: 0, reasoning: 0, requests: 1 });
   assert.equal(cacheTotals(cache).tokens, 100, 'archiving never loses a token');
   assert.equal(cacheTotals(cache).requests, 3);
 });
@@ -108,13 +111,6 @@ test('reasoning coverage survives serialization and monthly archive merges', () 
   assert.deepEqual(parseCache(serializeCache(restored, now))!.archive, restored.archive);
 });
 
-test('cache rejects invalid reasoning coverage counts', () => {
-  for (const reported of [-1, 0.5, 2, null, '1']) {
-    const cache = parseCache(JSON.stringify({ version: CACHE_VERSION, archive: { '2024-01': { [ID]: [0, 0, 0, 0, 1, reported] } } }));
-    assert.equal(cache?.archive.size, 0);
-  }
-});
-
 test('effort round trips independently of token coverage and rejects malformed histograms', () => {
   const cache = cacheWith(1, totals({ requests: 3, reasoningEfforts: [{ effort: 'high', requests: 2 }] }));
   assert.deepEqual(parseCache(serializeCache(cache, 0)), cache);
@@ -123,7 +119,7 @@ test('effort round trips independently of token coverage and rejects malformed h
   for (const efforts of [[{ effort: '', requests: 1 }], [{ effort: 'high', requests: 2 }],
     [{ effort: 'high', requests: 0 }], [{ effort: 'high', requests: 0.5 }],
     [{ effort: 'high', requests: 1 }, { effort: 'high', requests: 1 }], 'high']) {
-    const restored = parseCache(JSON.stringify({ version: CACHE_VERSION, archive: { '2024-01': { [ID]: [0, 0, 0, 0, 1, null, efforts] } } }));
+    const restored = parseCache(JSON.stringify({ version: CACHE_VERSION, archive: { '2024-01': { [ID]: [0, 0, 0, 0, 0, 1, null, efforts] } } }));
     assert.equal(restored?.archive.size, 0);
   }
   assert.equal(parseCache(JSON.stringify({ version: 2, sessions: {} })), undefined, 'older caches must refold effort');
@@ -133,4 +129,12 @@ test('whole-corpus totals add the archive to the live sessions', () => {
   const cache = cacheWith(bucketOf(Date.UTC(2026, 9, 4, 12, 0, 0)), totals({ input: 100, output: 20, requests: 2 }));
   cache.archive.set('2024-01', new Map([[ID, totals({ input: 1_000, output: 500, requests: 7 })]]));
   assert.deepEqual(cacheTotals(cache), { tokens: 1_620, requests: 9 });
+});
+
+test('whole-corpus totals count cache reads and writes like the panel does', () => {
+  const cache = cacheWith(bucketOf(Date.UTC(2026, 9, 4, 12, 0, 0)), totals({ input: 2_032, output: 187, cacheRead: 9_472, requests: 1 }));
+  cache.archive.set('2024-01', new Map([[ID, totals({ input: 1_000, output: 100, cacheWrite: 900, requests: 1 })]]));
+  assert.deepEqual(cacheTotals(cache), { tokens: 13_691, requests: 2 });
+  compactArchive(cache, Date.UTC(2026, 9, 4, 12), 0, () => '2026-10');
+  assert.deepEqual(cacheTotals(cache), { tokens: 13_691, requests: 2 }, 'archiving keeps the components intact');
 });

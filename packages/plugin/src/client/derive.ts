@@ -13,6 +13,9 @@ export interface UsageRow {
   input: number;
   output: number;
   cacheRead: number;
+  cacheWrite: number;
+  /** Both cache halves as the table presents them; the split stays available in the row. */
+  cache: number;
   reasoning: number;
   /** Requests with an explicit finite reasoning count in the durable log. */
   reasoningReported?: number;
@@ -79,11 +82,14 @@ export function deriveUsage(snapshot: UsageSnapshot, query: string, metric: Usag
     rows.push({
       index: totals.series,
       series,
-      tokens: totals.input + totals.output,
+      // An older Host sends no total; the four disjoint components are then summed here.
+      tokens: totals.tokens ?? totals.input + totals.output + totals.cacheRead + (totals.cacheWrite ?? 0),
       requests: totals.requests,
       input: totals.input,
       output: totals.output,
       cacheRead: totals.cacheRead,
+      cacheWrite: totals.cacheWrite ?? 0,
+      cache: totals.cacheRead + (totals.cacheWrite ?? 0),
       reasoning: totals.reasoning,
       ...(totals.reasoningReported === undefined ? {} : { reasoningReported: totals.reasoningReported }),
       ...(totals.reasoningEfforts === undefined ? {} : { reasoningEfforts: totals.reasoningEfforts }),
@@ -126,6 +132,9 @@ export interface ProviderGroup {
   input: number;
   output: number;
   cacheRead: number;
+  cacheWrite: number;
+  /** Both cache halves as the table presents them. */
+  cache: number;
   reasoning: number;
   /** Sum of the reported counts, or undefined when no model of the group declared one. */
   reasoningReported: number | undefined;
@@ -146,6 +155,8 @@ export function groupByProvider(rows: UsageRow[], metric: UsageMetric = 'tokens'
         input: 0,
         output: 0,
         cacheRead: 0,
+        cacheWrite: 0,
+        cache: 0,
         reasoning: 0,
         reasoningReported: undefined,
         lastDay: undefined,
@@ -158,6 +169,8 @@ export function groupByProvider(rows: UsageRow[], metric: UsageMetric = 'tokens'
     group.input += row.input;
     group.output += row.output;
     group.cacheRead += row.cacheRead;
+    group.cacheWrite += row.cacheWrite;
+    group.cache += row.cache;
     group.reasoning += row.reasoning;
     if (row.reasoningReported !== undefined) group.reasoningReported = (group.reasoningReported ?? 0) + row.reasoningReported;
     if (row.lastDay !== undefined && (group.lastDay === undefined || row.lastDay > group.lastDay)) group.lastDay = row.lastDay;

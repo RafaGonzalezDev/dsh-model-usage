@@ -217,7 +217,7 @@ export class UsageAggregator implements UsageSnapshotProvider {
     const series: UsageSeries[] = ordered.map(id => ({ id, ...splitSeriesId(id) }));
     const seriesTotals: UsageSeriesTotals[] = ordered.map((id, index) => {
       const totals = weights.get(id) ?? emptyTotals();
-      return { series: index, ...totals };
+      return { series: index, ...totals, tokens: totalTokens(totals) };
     });
     const position = new Map<string, number>();
     ordered.forEach((id, index) => position.set(id, index));
