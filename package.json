@@ -1,6 +1,6 @@
 {
   "name": "dsh-model-usage-workspace",
-  "version": "0.4.5",
+  "version": "0.5.3",
   "private": true,
   "type": "module",
   "license": "MIT",
