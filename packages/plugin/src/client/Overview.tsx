@@ -73,8 +73,8 @@ export function Overview(props: OverviewProps) {
     </div>
 
     <div className="dsh-model-usage-summary-line">
-      <span>{formatCount(props.view.totals.requests)} peticiones <span aria-hidden="true">·</span> {props.view.totals.models} modelos <span aria-hidden="true">·</span> {props.view.totals.providers} proveedores</span>
-      <span title={copy.overview.historyHint}>Histórico: {formatTokens(props.allTime.tokens)} tokens</span>
+      <span>{formatCount(props.view.totals.requests)} requests <span aria-hidden="true">·</span> {props.view.totals.models} models <span aria-hidden="true">·</span> {props.view.totals.providers} providers</span>
+      <span title={copy.overview.historyHint}>Lifetime: {formatTokens(props.allTime.tokens)} tokens</span>
     </div>
   </section>;
 }

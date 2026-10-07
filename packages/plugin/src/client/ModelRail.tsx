@@ -14,7 +14,7 @@ export interface ModelRailProps {
   emptyMessage: string;
 }
 
-const MONTH_LABEL = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+const MONTH_LABEL = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 
 /** The models that carried the window, with their monthly shape and share of the total. */
 export function ModelRail({ models, monthKeys, metric, others, peak, emptyMessage }: ModelRailProps) {

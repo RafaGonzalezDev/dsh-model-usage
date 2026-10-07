@@ -12,7 +12,7 @@ export interface HeatmapProps {
   metric: UsageMetric;
 }
 
-const MONTH = new Intl.DateTimeFormat('es-ES', { month: 'short', timeZone: 'UTC' });
+const MONTH = new Intl.DateTimeFormat('en-US', { month: 'short', timeZone: 'UTC' });
 
 /** One square per day across the whole window; arrow keys traverse real days, not padding. */
 export function Heatmap({ days, dayList, values, cuts, metric }: HeatmapProps) {
@@ -44,7 +44,7 @@ export function Heatmap({ days, dayList, values, cuts, metric }: HeatmapProps) {
   };
 
   return <div className="dsh-model-usage-calendar">
-      <div className="dsh-model-usage-cal-grid" role="group" aria-label={`${copy.overview.title}: actividad diaria`}>
+      <div className="dsh-model-usage-cal-grid" role="group" aria-label={`${copy.overview.title}: daily activity`}>
         {weeks.map((week, weekIndex) => <div key={weekIndex} className="dsh-model-usage-cal-week">
           <span className="dsh-model-usage-cal-month" aria-hidden="true">{months[weekIndex]}</span>
           {week.map((dayIndex, row) => {
@@ -52,7 +52,7 @@ export function Heatmap({ days, dayList, values, cuts, metric }: HeatmapProps) {
             const day = days[dayIndex] ?? '';
             const detail = dayList[dayIndex];
             const value = values[dayIndex] ?? 0;
-            const label = `${formatDay(day)}: ${formatTokens(detail?.tokens ?? 0)} tokens, ${formatCount(detail?.requests ?? 0)} peticiones`;
+            const label = `${formatDay(day)}: ${formatTokens(detail?.tokens ?? 0)} tokens, ${formatCount(detail?.requests ?? 0)} requests`;
             return <div key={row} className="dsh-model-usage-cal-slot"
               data-side={row < 3 ? 'below' : 'above'}
               data-align={weekIndex * 2 >= weeks.length ? 'end' : undefined}
@@ -67,7 +67,7 @@ export function Heatmap({ days, dayList, values, cuts, metric }: HeatmapProps) {
                 onKeyDown={event => navigate(event, dayIndex)} />
               <span id={`usage-day-${dayIndex}`} className="dsh-model-usage-tip" role="tooltip">
                 <strong>{formatDay(day)}</strong>
-                <span>{formatTokens(detail?.tokens ?? 0)} tokens · {formatCount(detail?.requests ?? 0)} peticiones</span>
+                <span>{formatTokens(detail?.tokens ?? 0)} tokens · {formatCount(detail?.requests ?? 0)} requests</span>
                 {(detail?.contributors ?? []).map(item => <span key={`${item.provider}\u0000${item.model}`} className="dsh-model-usage-tip-row">
                   <span>{item.name ?? item.model}</span>
                   <span>{metric === 'tokens' ? formatTokens(item.tokens) : formatCount(item.requests)}</span>

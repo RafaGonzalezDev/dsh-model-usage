@@ -145,10 +145,10 @@ test('token figures stay compact and never lose the exact count', () => {
   assert.equal(formatTokens(12_340), '12.34K');
   assert.equal(formatTokens(448_600_000), '448.60M');
   assert.equal(formatTokens(1_200_000_000), '1.20B');
-  assert.equal(formatCount(3_349), '3349');
-  assert.equal(formatShare(400, 450), '88.9 %');
-  assert.equal(formatShare(1, 0), '0 %');
-  assert.equal(formatDay('2026-05-04'), '4 may 2026');
+  assert.equal(formatCount(3_349), '3,349');
+  assert.equal(formatShare(400, 450), '88.9%');
+  assert.equal(formatShare(1, 0), '0%');
+  assert.equal(formatDay('2026-05-04'), 'May 4, 2026');
 });
 
 /** Two providers, three models: enough to prove grouping and the trailing window. */

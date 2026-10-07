@@ -17,7 +17,7 @@ export function KpiRow({ view, metric }: KpiRowProps) {
     { label: copy.kpi.peak, value: format(peak?.value ?? 0), hint: peak === undefined ? copy.empty : formatDay(peak.day) },
     { label: copy.kpi.activeDays, value: formatCount(totals.activeDays), hint: copy.overview.activeDaysHint(totals.activeDays, view.days.length) },
   ];
-  return <div className="dsh-model-usage-kpis" role="group" aria-label="Resumen de los últimos 30 días">
+  return <div className="dsh-model-usage-kpis" role="group" aria-label="Last 30 days summary">
     {stats.map(stat => <div key={stat.label} className="dsh-model-usage-kpi" title={stat.hint}>
       <span className="dsh-model-usage-kpi-value">{stat.value}</span>
       <span className="dsh-model-usage-kpi-label">{stat.label}</span>

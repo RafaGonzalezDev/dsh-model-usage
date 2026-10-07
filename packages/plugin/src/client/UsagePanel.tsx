@@ -78,7 +78,7 @@ export function UsagePanel(props: UsagePanelProps) {
         />
         <EffortSummary rows={view.rows} />
         <footer className="dsh-model-usage-footnote">
-          <span>{copy.updated} {formatClock(state.snapshot.generatedAt)} · {state.snapshot.scanned.sessions} {copy.scanned}{state.snapshot.scanned.skipped > 0 && ` · ${state.snapshot.scanned.skipped} ilegibles`}</span>
+          <span>{copy.updated} {formatClock(state.snapshot.generatedAt)} · {state.snapshot.scanned.sessions} {copy.scanned}{state.snapshot.scanned.skipped > 0 && ` · ${state.snapshot.scanned.skipped} unreadable`}</span>
           <span>{formatDay(state.snapshot.from)} – {formatDay(state.snapshot.to)} · {copy.footnote.zone}: {state.snapshot.zone} · {copy.footnote.noCost}</span>
         </footer>
       </>}
