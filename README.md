@@ -6,7 +6,7 @@ daily usage plus a per-model, per-provider breakdown, aggregated from every sess
 | | |
 | --- | --- |
 | Package | `dsh-model-usage` (this source repository is `dsh-model-usage`) |
-| Version | `0.5.3` |
+| Version | `0.5.4` |
 | Harness compatibility | `>=0.2.0-rc.2 <0.3.0-0` |
 | License | MIT |
 
