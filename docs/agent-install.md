@@ -129,9 +129,9 @@ Expected state:
 - `why` resolves the package from the profile tree.
 - `plugin --profile desktop version-exemptions` prints the profile's exemptions (empty is normal).
 
-Then confirm in the UI: the button at the sidebar foot opens the usage dashboard, and **Volver**
-returns to the conversation. A file present in the profile is not proof the plugin loaded; only the
-restarted Host shows that.
+Then confirm in the UI: the button at the sidebar foot opens the usage dashboard, and the
+**Back to conversation** button in its header returns to the conversation. A file present in the
+profile is not proof the plugin loaded; only the restarted Host shows that.
 
 Optionally cross-check the numbers against the Host's own cache:
 

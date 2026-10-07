@@ -12,7 +12,8 @@ does not replace it.
 - The plugin is **read-only**: it folds the durable session logs the Harness already writes and
   serves an aggregate over the Remote contract. It never writes session data and never calls a
   provider.
-- The panel copy ships in Spanish. Repository documentation and identifiers stay in English.
+- The panel copy ships in English, like the rest of the Harness UI. Repository documentation and
+  identifiers stay in English.
 
 ## Invariants
 

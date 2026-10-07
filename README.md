@@ -24,16 +24,17 @@ daily usage plus a per-model, per-provider breakdown, aggregated from every sess
   table rows use lateral padding and rounded bands.
 - **A fixed 12-month view (365 days)**, including today in the browser's time zone. There is no
   period selector; the overview and breakdown always describe the same window.
-- **Live search above “Modelos más usados”**: typing filters the calendar, models, table and effort
+- **Live search above “Most used models”**: typing filters the calendar, models, table and effort
   summary together, matching official name, model ID or provider without case sensitivity. There
-  is no “Filtrar actividad” dropdown or provider/model chip selector.
+  is no “Filter activity” dropdown or provider/model chip selector.
 - **Official selector names** from the current DSH model catalog (`LlmModelInfo.name`), with the
   durable model ID as fallback. Provider/model identifiers remain unchanged.
 - **Reasoning effort coverage**: logged effort levels and request counts, separate from reasoning
   token counts. Missing effort is unknown, not a default or zero.
 
 The dashboard is a main view: open it from the button at the sidebar foot, right below the ChatGPT
-Plan notice when `dsh-chatgpt-plan` is installed, and return to the conversation with **Volver**.
+Plan notice when `dsh-chatgpt-plan` is installed, and return to the conversation with the header's
+**Back to conversation** button.
 
 ## How it counts
 
@@ -142,7 +143,7 @@ runner cannot parse `.tsx`.
 ## Documentation
 
 Everything a reviewer needs lives in this README and in the source. The panel copy itself ships in
-Spanish. Installation, verification and rollback steps for a terminal or desktop agent are in the
+English. Installation, verification and rollback steps for a terminal or desktop agent are in the
 [agent installation runbook](<docs/agent-install.md>).
 
 ## License
